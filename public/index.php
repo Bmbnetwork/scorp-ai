@@ -35,9 +35,7 @@ $env = require dirname(__DIR__) . '/app/config/bootstrap.php';
                 </div>
             </div>
 
-            <div class="header-meta">
-                <span class="badge" data-state="info">Phase 2 — stateless public build</span>
-            </div>
+            
         </div>
     </header>
 
@@ -127,12 +125,7 @@ $env = require dirname(__DIR__) . '/app/config/bootstrap.php';
                     deterministic rules, and generate an explanation.
                 </p>
 
-                <ul class="state-list">
-                    <li>Empty state: shown before a request.</li>
-                    <li>Loading state: shown while PayPal, rules, and Gemini run.</li>
-                    <li>Error state: shown when the required PayPal step fails. No report is produced, and you can retry.</li>
-                    <li>Result state: shows the complete investigation report with provenance.</li>
-                </ul>
+                
             </div>
 
             <div id="loading-state" class="state" hidden>
@@ -140,12 +133,8 @@ $env = require dirname(__DIR__) . '/app/config/bootstrap.php';
 
                 <h2>Investigating…</h2>
 
-                <p class="muted">
-                    1. Retrieving order evidence from PayPal Sandbox.<br>
-                    2. Applying deterministic investigation rules.<br>
-                    3. Generating a Gemini explanation, or a labelled fallback if unavailable.
-                </p>
-                <p class="muted loading-hint">This usually takes a few seconds. Please don’t submit again while it runs.</p>
+                                <p class="muted">Retrieving PayPal evidence, analyzing findings, and preparing the report.</p>
+                <p class="muted loading-hint">This usually takes a few seconds.</p>
             </div>
 
             <div id="error-state" class="state state-error" hidden>
@@ -280,11 +269,8 @@ $env = require dirname(__DIR__) . '/app/config/bootstrap.php';
         </section>
     </main>
 
-    <footer class="container footer">
-        <p>
-            <a href="env-check.php">Environment check</a>
-            · Stateless investigation interface. PayPal evidence, Gemini calls, and metadata-only audit logging are server-side.
-        </p>
+        <footer class="container footer">
+        <p>SCORP AI analyzes PayPal Sandbox order evidence and generates an investigation report.</p>
     </footer>
 </body>
 </html>
