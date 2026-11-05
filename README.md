@@ -49,3 +49,23 @@ Gemini explains the structured evidence, or fallback is used
         ↓
 Browser renders a separated report:
 PayPal evidence / SCORP AI findings / explanation / next steps
+
+
+## Sandbox test order IDs
+
+Use one of these on the live site:
+
+- PASTE_ORDER_ID_1: 7AP856189S292592F
+- PASTE_ORDER_ID_2: 4E798323DM779034V
+- PASTE_ORDER_ID_3: 6R6412534D096942V
+- PASTE_ORDER_ID_4: 2137241420534622H
+- PASTE_ORDER_ID_5: 90Y0769070984242A
+- PASTE_ORDER_ID_6: 0AY64465A60713739
+- PASTE_ORDER_ID_7: 9R463514TY2757347
+- PASTE_ORDER_ID_8: 2NS044149D7145304
+- PASTE_ORDER_ID_9: 2NS044149D7145304
+- PASTE_ORDER_ID_10: 4TW70456PU585833P
+
+Open: https://scorp-ai.onrender.com
+THESE ARE SANDBOX ORDER ID
+Paste an order ID into the field and click **Start investigation**.
