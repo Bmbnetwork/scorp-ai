@@ -1,12 +1,10 @@
 FROM php:8.2-apache
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libcurl4-openssl-dev \
-    libonig-dev \
-    libssl-dev \
- && rm -rf /var/lib/apt/lists/*
-
-RUN docker-php-ext-install curl mbstring openssl opcache
+# NOTE: curl, mbstring, openssl, json and opcache are already compiled and
+# enabled in the official php:8.2-apache image. We deliberately do NOT run
+# docker-php-ext-install for them: rebuilding bundled extensions is a frequent
+# cause of immediate build failures. The application's required extensions
+# (curl, openssl, json, mbstring) are therefore available without a build step.
 
 RUN a2enmod headers
 
