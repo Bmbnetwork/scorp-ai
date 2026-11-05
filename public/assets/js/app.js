@@ -24,14 +24,6 @@
     const resultTitle = document.getElementById("result-title");
     const resultReportState = document.getElementById("result-report-state");
     const resultStatusPill = document.getElementById("result-status-pill");
-    const resultSavedNote = document.getElementById("result-saved-note");
-
-    const resultActions = document.getElementById("result-actions");
-    const resultActionsLabel = document.getElementById("result-actions-label");
-    const resultActionsStatus = document.getElementById("result-actions-status");
-    const actionPrint = document.getElementById("action-print");
-    const actionJson = document.getElementById("action-json");
-    const actionCsv = document.getElementById("action-csv");
 
     const legendExplanation = document.getElementById("legend-explanation");
     const legendExplanationText = document.getElementById("legend-explanation-text");
@@ -63,20 +55,11 @@
     const resultNextSteps = document.getElementById("result-next-steps");
     const resultProvenance = document.getElementById("result-provenance");
 
-    const historyRefreshButton = document.getElementById("history-refresh");
-    const historyStatus = document.getElementById("history-status");
-    const historyTableWrap = document.getElementById("history-table-wrap");
-    const historyBody = document.getElementById("history-body");
-    const historyEmpty = document.getElementById("history-empty");
-
     if (!form || !input || !investigateButton || !statusArea) {
         return;
     }
 
     const apiEndpoint = new URL("api/retrieve.php", window.location.href).href;
-    const historyEndpoint = new URL("api/history.php", window.location.href).href;
-    const exportEndpoint = new URL("api/export.php", window.location.href).href;
-    const reportPage = new URL("report.php", window.location.href).href;
     const referencePattern = /^[A-Za-z0-9_-]{6,64}$/;
     const notProvided = "Not provided";
 
@@ -105,12 +88,8 @@
     ];
 
     let inFlight = false;
-    let historyBusy = false;
-    let currentReportId = null;
     let lastReference = "";
     let announceTimer = 0;
-
-    // ---- accessibility helpers --------------------------------------------
 
     function announce(text) {
         if (!announcer) {
@@ -145,8 +124,6 @@
         }
     }
 
-    // ---- wiring ------------------------------------------------------------
-
     form.addEventListener("submit", (event) => {
         event.preventDefault();
         runInvestigation(input.value.trim());
@@ -167,12 +144,11 @@
         if (inFlight) {
             return;
         }
+
         input.value = "";
         lastReference = "";
         clearFieldError();
         resetToEmptyState();
-        setSavedNote("", true);
-        renderResultActions(null);
         updateClearButton();
         input.focus();
     });
@@ -182,43 +158,6 @@
             runInvestigation(lastReference || input.value.trim());
         });
     }
-
-    if (historyRefreshButton) {
-        historyRefreshButton.addEventListener("click", () => loadHistory());
-    }
-
-    if (actionPrint) {
-        actionPrint.addEventListener("click", () => openPrintable(currentReportId));
-    }
-    if (actionJson) {
-        actionJson.addEventListener("click", () => downloadExport(currentReportId, "json"));
-    }
-    if (actionCsv) {
-        actionCsv.addEventListener("click", () => downloadExport(currentReportId, "csv"));
-    }
-
-    if (historyBody) {
-        historyBody.addEventListener("click", (event) => {
-            const target = event.target;
-            if (!(target instanceof HTMLElement)) {
-                return;
-            }
-
-            const openId = target.getAttribute("data-open-id");
-            const removeId = target.getAttribute("data-remove-id");
-            const printId = target.getAttribute("data-print-id");
-            const jsonId = target.getAttribute("data-json-id");
-            const csvId = target.getAttribute("data-csv-id");
-
-            if (openId) { openInvestigation(parseInt(openId, 10)); return; }
-            if (printId) { openPrintable(parseInt(printId, 10)); return; }
-            if (jsonId) { downloadExport(parseInt(jsonId, 10), "json"); return; }
-            if (csvId) { downloadExport(parseInt(csvId, 10), "csv"); return; }
-            if (removeId) { removeInvestigation(parseInt(removeId, 10)); }
-        });
-    }
-
-    // ---- core flow ---------------------------------------------------------
 
     async function runInvestigation(rawValue) {
         if (inFlight) {
@@ -239,7 +178,10 @@
         try {
             const response = await fetch(apiEndpoint, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
                 body: JSON.stringify({ reference: rawValue }),
                 cache: "no-store"
             });
@@ -248,13 +190,8 @@
 
             if (payload.ok === true && payload.data) {
                 showResultState(payload.data);
-                renderSavedNote(payload.data);
-                renderResultActions(payload.data);
-                loadHistory();
             } else {
                 showErrorState(normalizeError(payload, response.status));
-                setSavedNote("", true);
-                renderResultActions(null);
             }
         } catch (error) {
             showErrorState({
@@ -263,43 +200,65 @@
                 message: "The local backend did not respond. Confirm the PHP development server is running.",
                 details: []
             });
-            setSavedNote("", true);
-            renderResultActions(null);
         } finally {
             setIdleState();
         }
     }
 
     function validateReference(value) {
-        if (value === "") { return { ok: false, message: "Enter a PayPal Sandbox order ID." }; }
-        if (value.length < 6) { return { ok: false, message: "The reference must be at least 6 characters long." }; }
-        if (value.length > 64) { return { ok: false, message: "The reference must not exceed 64 characters." }; }
-        if (!referencePattern.test(value)) { return { ok: false, message: "Use only letters, numbers, hyphens, and underscores." }; }
+        if (value === "") {
+            return { ok: false, message: "Enter a PayPal Sandbox order ID." };
+        }
+
+        if (value.length < 6) {
+            return { ok: false, message: "The reference must be at least 6 characters long." };
+        }
+
+        if (value.length > 64) {
+            return { ok: false, message: "The reference must not exceed 64 characters." };
+        }
+
+        if (!referencePattern.test(value)) {
+            return { ok: false, message: "Use only letters, numbers, hyphens, and underscores." };
+        }
+
         return { ok: true };
     }
 
     function setFieldError(message) {
-        if (!fieldError) { return; }
+        if (!fieldError) {
+            return;
+        }
+
         fieldError.textContent = message;
         fieldError.hidden = false;
         input.setAttribute("aria-invalid", "true");
     }
 
     function clearFieldError() {
-        if (!fieldError) { return; }
+        if (!fieldError) {
+            return;
+        }
+
         fieldError.textContent = "";
         fieldError.hidden = true;
         input.removeAttribute("aria-invalid");
     }
 
     function updateClearButton() {
-        if (!clearButton) { return; }
+        if (!clearButton) {
+            return;
+        }
+
         clearButton.disabled = input.value.trim() === "" || inFlight;
     }
 
     function showOnly(element) {
         [emptyState, loadingState, errorState].forEach((node) => {
-            if (!node) { return; }
+            if (!node) {
+                return;
+            }
+
             node.hidden = node !== element;
         });
     }
@@ -313,55 +272,93 @@
 
     function setLoadingState() {
         inFlight = true;
+
         statusArea.hidden = false;
         resultState.hidden = true;
         showOnly(loadingState);
         clearErrorState();
+
         investigateButton.disabled = true;
         investigateButton.setAttribute("aria-busy", "true");
-        if (investigateLabel) { investigateLabel.textContent = "Investigating…"; }
-        if (clearButton) { clearButton.disabled = true; }
-        // status-area is aria-live, so the loading copy is announced automatically.
+
+        if (investigateLabel) {
+            investigateLabel.textContent = "Investigating…";
+        }
+
+        if (clearButton) {
+            clearButton.disabled = true;
+        }
     }
 
     function setIdleState() {
         inFlight = false;
+
         investigateButton.disabled = false;
         investigateButton.removeAttribute("aria-busy");
-        if (investigateLabel) { investigateLabel.textContent = "Start investigation"; }
+
+        if (investigateLabel) {
+            investigateLabel.textContent = "Start investigation";
+        }
+
         updateClearButton();
     }
 
     function clearErrorState() {
-        if (errorTitle) { errorTitle.textContent = "Investigation could not be completed"; }
-        if (errorMessage) { errorMessage.textContent = ""; }
-        if (errorDetails) { errorDetails.hidden = true; clearChildren(errorDetails); }
-        if (errorRetry) { errorRetry.hidden = true; }
+        if (errorTitle) {
+            errorTitle.textContent = "Investigation could not be completed";
+        }
+
+        if (errorMessage) {
+            errorMessage.textContent = "";
+        }
+
+        if (errorDetails) {
+            errorDetails.hidden = true;
+            clearChildren(errorDetails);
+        }
+
+        if (errorRetry) {
+            errorRetry.hidden = true;
+        }
     }
 
     function showErrorState(error) {
         statusArea.hidden = false;
         resultState.hidden = true;
         showOnly(errorState);
-        if (errorTitle) { errorTitle.textContent = error.title || "Investigation could not be completed"; }
-        if (errorMessage) { errorMessage.textContent = error.message || "A required step failed, so no report is shown."; }
+
+        if (errorTitle) {
+            errorTitle.textContent = error.title || "Investigation could not be completed";
+        }
+
+        if (errorMessage) {
+            errorMessage.textContent = error.message || "A required step failed, so no report is shown.";
+        }
+
         if (errorDetails) {
             clearChildren(errorDetails);
+
             const details = Array.isArray(error.details) ? error.details.filter(Boolean) : [];
+
             if (details.length > 0) {
                 details.forEach((detail) => {
                     const li = document.createElement("li");
                     li.textContent = String(detail);
                     errorDetails.appendChild(li);
                 });
+
                 errorDetails.hidden = false;
             } else {
                 errorDetails.hidden = true;
             }
         }
-        if (errorRetry) { errorRetry.hidden = !(lastReference || input.value.trim()); }
-        // Move focus to the error heading so screen readers announce the failure.
+
+        if (errorRetry) {
+            errorRetry.hidden = !(lastReference || input.value.trim());
+        }
+
         focusHeading(errorTitle);
+        announce(errorMessage ? errorMessage.textContent : "Investigation could not be completed.");
     }
 
     function showResultState(data) {
@@ -393,386 +390,201 @@
         renderNextSteps(data.next_steps);
         renderProvenance(data);
 
-        // Focus the report heading (announces it); then bring the panel into view.
         focusHeading(resultTitle);
         scrollToResult();
+        announce("Investigation report ready.");
     }
-
-    function renderSavedNote(data) {
-        if (data.opened_from_history === true) {
-            setSavedNote("Opened saved investigation #" + String(data.investigation_id ?? "?") + ".", false);
-            return;
-        }
-        if (data.persisted === true) {
-            setSavedNote("Saved to history as #" + String(data.investigation_id ?? "?") + ".", false);
-            return;
-        }
-        if (data.persistence_error) {
-            setSavedNote("Not saved: " + String(data.persistence_error), false);
-            return;
-        }
-        setSavedNote("", true);
-    }
-
-    function setSavedNote(text, hidden) {
-        if (!resultSavedNote) { return; }
-        resultSavedNote.textContent = text;
-        resultSavedNote.hidden = hidden === true || text === "";
-    }
-
-    function renderResultActions(data) {
-        currentReportId = null;
-        setActionsStatus("", false);
-
-        const saved = !!data && data.persisted === true && Number.isInteger(data.investigation_id) && data.investigation_id > 0;
-
-        if (!resultActions) { return; }
-
-        if (!saved) {
-            resultActions.hidden = true;
-            if (resultActionsLabel) { resultActionsLabel.textContent = ""; }
-            [actionPrint, actionJson, actionCsv].forEach((b) => {
-                if (b) {
-                    b.disabled = true;
-                    b.removeAttribute("aria-label");
-                }
-            });
-            return;
-        }
-
-        currentReportId = data.investigation_id;
-        resultActions.hidden = false;
-        if (resultActionsLabel) {
-            resultActionsLabel.textContent = "Saved as #" + currentReportId + " — print or export this report:";
-        }
-        if (actionPrint) {
-            actionPrint.disabled = false;
-            actionPrint.setAttribute("aria-label", "Open printable report for investigation #" + currentReportId);
-        }
-        if (actionJson) {
-            actionJson.disabled = false;
-            actionJson.setAttribute("aria-label", "Export investigation #" + currentReportId + " as JSON");
-        }
-        if (actionCsv) {
-            actionCsv.disabled = false;
-            actionCsv.setAttribute("aria-label", "Export investigation #" + currentReportId + " as CSV");
-        }
-    }
-
-    function setActionsStatus(text, isError) {
-        if (!resultActionsStatus) { return; }
-        resultActionsStatus.textContent = text;
-        resultActionsStatus.hidden = text === "";
-        resultActionsStatus.classList.toggle("error", isError === true);
-        if (text !== "") {
-            announce(text);
-        }
-    }
-
-    function openPrintable(id) {
-        if (!Number.isInteger(id) || id <= 0) { return; }
-        window.open(reportPage + "?id=" + encodeURIComponent(String(id)), "_blank", "noopener");
-    }
-
-    async function downloadExport(id, format) {
-        if (!Number.isInteger(id) || id <= 0) { return; }
-
-        setActionsStatus("Preparing " + format.toUpperCase() + " export…", false);
-
-        try {
-            const response = await fetch(exportEndpoint + "?id=" + encodeURIComponent(String(id)) + "&format=" + encodeURIComponent(format), {
-                method: "GET",
-                headers: { "Accept": format === "csv" ? "text/csv" : "application/json" },
-                cache: "no-store"
-            });
-
-            const contentType = (response.headers.get("Content-Type") || "").toLowerCase();
-
-            if (!response.ok || (contentType.indexOf("application/json") !== -1 && format === "csv")) {
-                const err = await readJsonResponse(response);
-                const message = err && err.error ? String(err.error.message || "Export failed.") : "Export failed.";
-                setActionsStatus(message, true);
-                return;
-            }
-
-            const blob = await response.blob();
-            const filename = filenameFromDisposition(response.headers.get("Content-Disposition")) || ("scorp-report-" + id + "." + format);
-            downloadBlob(blob, filename);
-            setActionsStatus("Exported " + filename + ".", false);
-        } catch (error) {
-            setActionsStatus("Could not reach the export endpoint.", true);
-        }
-    }
-
-    function filenameFromDisposition(header) {
-        if (!header) { return ""; }
-        const match = /filename="?([^"]+)"?/i.exec(header);
-        return match ? match[1] : "";
-    }
-
-    function downloadBlob(blob, filename) {
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement("a");
-        anchor.href = url;
-        anchor.download = filename;
-        document.body.appendChild(anchor);
-        anchor.click();
-        document.body.removeChild(anchor);
-        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }
-
-    async function loadHistory() {
-        if (historyBusy) { return; }
-        historyBusy = true;
-        if (historyRefreshButton) { historyRefreshButton.disabled = true; }
-
-        setHistoryStatus("Loading history…", false);
-        if (historyTableWrap) { historyTableWrap.hidden = true; }
-        if (historyEmpty) { historyEmpty.hidden = true; }
-
-        try {
-            const response = await fetch(historyEndpoint, { method: "GET", headers: { "Accept": "application/json" }, cache: "no-store" });
-            const payload = await readJsonResponse(response);
-
-            if (payload.ok === true && payload.data && Array.isArray(payload.data.items)) {
-                renderHistoryList(payload.data.items);
-            } else {
-                const code = payload && payload.error ? String(payload.error.code || "") : "";
-                if (code === "history_unavailable") {
-                    setHistoryStatus("History not available on this machine (database not configured or unreachable). Print and export are disabled until an investigation is saved.", false);
-                    if (historyTableWrap) { historyTableWrap.hidden = true; }
-                    if (historyEmpty) { historyEmpty.hidden = true; }
-                } else {
-                    setHistoryStatus("History could not be loaded right now.", false);
-                }
-            }
-        } catch (error) {
-            setHistoryStatus("History could not be reached.", false);
-            if (historyTableWrap) { historyTableWrap.hidden = true; }
-            if (historyEmpty) { historyEmpty.hidden = true; }
-        } finally {
-            historyBusy = false;
-            if (historyRefreshButton) { historyRefreshButton.disabled = false; }
-        }
-    }
-
-    function renderHistoryList(items) {
-        clearChildren(historyBody);
-
-        if (!Array.isArray(items) || items.length === 0) {
-            setHistoryStatus("", true);
-            if (historyTableWrap) { historyTableWrap.hidden = true; }
-            if (historyEmpty) { historyEmpty.hidden = false; }
-            return;
-        }
-
-        setHistoryStatus("", true);
-        if (historyEmpty) { historyEmpty.hidden = true; }
-        if (historyTableWrap) { historyTableWrap.hidden = false; }
-
-        items.forEach((item) => {
-            if (!historyBody) { return; }
-            const row = document.createElement("tr");
-            const rowLabel = item.reference ? String(item.reference) : ("#" + String(item.id));
-
-            appendCell(row, item.reference);
-            appendCell(row, item.order_status);
-
-            const amountText = item.amount_value
-                ? String(item.amount_value) + (item.amount_currency ? " " + String(item.amount_currency) : "")
-                : "";
-            appendCell(row, amountText);
-
-            const expCell = document.createElement("td");
-            const expPill = document.createElement("span");
-            expPill.className = "status-pill";
-            if (item.ai_origin === "gemini" && item.ai_available === true) {
-                expPill.dataset.state = "ai";
-                expPill.textContent = "Gemini AI";
-            } else if (item.ai_origin === "deterministic_fallback") {
-                expPill.dataset.state = "fallback";
-                expPill.textContent = "Fallback";
-            } else {
-                expPill.dataset.state = "info";
-                expPill.textContent = "None";
-            }
-            expCell.appendChild(expPill);
-            row.appendChild(expCell);
-
-            appendCell(row, item.created_timestamp);
-
-            const actionsCell = document.createElement("td");
-            actionsCell.className = "history-actions";
-
-            actionsCell.appendChild(rowButton("Open", "data-open-id", item.id, "secondary-button small", "Open investigation " + rowLabel));
-            actionsCell.appendChild(rowButton("Print", "data-print-id", item.id, "secondary-button small", "Print investigation " + rowLabel));
-            actionsCell.appendChild(rowButton("JSON", "data-json-id", item.id, "secondary-button small", "Export investigation " + rowLabel + " as JSON"));
-            actionsCell.appendChild(rowButton("CSV", "data-csv-id", item.id, "secondary-button small", "Export investigation " + rowLabel + " as CSV"));
-            actionsCell.appendChild(rowButton("Remove", "data-remove-id", item.id, "secondary-button small danger", "Remove investigation " + rowLabel));
-
-            row.appendChild(actionsCell);
-            historyBody.appendChild(row);
-        });
-    }
-
-    function rowButton(label, attrName, id, className, accessibleName) {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = className;
-        btn.textContent = label;
-        btn.setAttribute(attrName, String(id));
-        if (accessibleName) {
-            btn.setAttribute("aria-label", accessibleName);
-        }
-        return btn;
-    }
-
-    async function openInvestigation(id) {
-        if (!Number.isInteger(id) || id <= 0 || historyBusy) { return; }
-        historyBusy = true;
-        try {
-            const response = await fetch(historyEndpoint + "?id=" + encodeURIComponent(String(id)), { method: "GET", headers: { "Accept": "application/json" }, cache: "no-store" });
-            const payload = await readJsonResponse(response);
-            if (payload.ok === true && payload.data) {
-                showResultState(payload.data);
-                renderSavedNote(payload.data);
-                renderResultActions(payload.data);
-            } else {
-                const code = payload && payload.error ? String(payload.error.code || "") : "";
-                setHistoryStatus(code === "history_not_found" ? "That investigation no longer exists." : "Could not open that investigation.", false);
-            }
-        } catch (error) {
-            setHistoryStatus("Could not reach history.", false);
-        } finally {
-            historyBusy = false;
-        }
-    }
-
-    async function removeInvestigation(id) {
-        if (!Number.isInteger(id) || id <= 0 || historyBusy) { return; }
-        const ok = window.confirm("Remove saved investigation #" + id + "? This cannot be undone.");
-        if (!ok) { return; }
-        historyBusy = true;
-        try {
-            const response = await fetch(historyEndpoint + "?id=" + encodeURIComponent(String(id)), { method: "DELETE", headers: { "Accept": "application/json" }, cache: "no-store" });
-            const payload = await readJsonResponse(response);
-            if (!(payload.ok === true)) {
-                setHistoryStatus("Could not remove that investigation.", false);
-            }
-            if (currentReportId === id) {
-                currentReportId = null;
-                renderResultActions(null);
-            }
-        } catch (error) {
-            setHistoryStatus("Could not reach history.", false);
-        } finally {
-            historyBusy = false;
-            loadHistory();
-        }
-    }
-
-    function setHistoryStatus(text, hidden) {
-        if (!historyStatus) { return; }
-        historyStatus.textContent = text;
-        historyStatus.hidden = hidden === true || text === "";
-        if (text !== "") {
-            announce(text);
-        }
-    }
-
-    // ---- rendering helpers (unchanged behaviour) ---------------------------
 
     async function readJsonResponse(response) {
         const text = await response.text();
-        try { return JSON.parse(text); } catch (error) {
-            return { ok: false, error: { code: "invalid_response", title: "Unexpected backend response", message: "The backend did not return valid JSON.", details: [] } };
+
+        try {
+            return JSON.parse(text);
+        } catch (error) {
+            return {
+                ok: false,
+                error: {
+                    code: "invalid_response",
+                    title: "Unexpected backend response",
+                    message: "The backend did not return valid JSON.",
+                    details: []
+                }
+            };
         }
     }
 
     function normalizeError(payload, httpStatus) {
         const error = payload && payload.error ? payload.error : {};
+
         return {
             code: String(error.code || "unknown_error"),
             title: String(error.title || defaultErrorTitle(httpStatus)),
             message: String(error.message || "A required step failed, so no report is shown."),
-            details: Array.isArray(error.details) ? error.details.map((item) => String(item)).filter(Boolean) : []
+            details: Array.isArray(error.details)
+                ? error.details.map((item) => String(item)).filter(Boolean)
+                : []
         };
     }
 
     function defaultErrorTitle(httpStatus) {
-        if (httpStatus === 404) { return "Order not found"; }
-        if (httpStatus === 401) { return "PayPal authentication failed"; }
-        if (httpStatus === 429) { return "Too many requests"; }
-        if (httpStatus === 422) { return "Invalid input"; }
-        if (httpStatus === 503) { return "Backend not configured"; }
-        if (httpStatus >= 500) { return "Backend or PayPal error"; }
+        if (httpStatus === 404) {
+            return "Order not found";
+        }
+
+        if (httpStatus === 401) {
+            return "PayPal authentication failed";
+        }
+
+        if (httpStatus === 429) {
+            return "Too many requests";
+        }
+
+        if (httpStatus === 422) {
+            return "Invalid input";
+        }
+
+        if (httpStatus === 503) {
+            return "Backend not configured";
+        }
+
+        if (httpStatus >= 500) {
+            return "Backend or PayPal error";
+        }
+
         return "Investigation could not be completed";
     }
 
     function extractAmount(data) {
         const amount = data.amount;
+
         if (amount && typeof amount === "object") {
-            return { value: firstString(amount.value, amount.amount), currency: firstString(amount.currency_code, amount.currency, data.currency) };
+            return {
+                value: firstString(amount.value, amount.amount),
+                currency: firstString(amount.currency_code, amount.currency, data.currency)
+            };
         }
-        return { value: amount === undefined || amount === null ? "" : String(amount), currency: firstString(data.currency, data.currency_code) };
+
+        return {
+            value: amount === undefined || amount === null ? "" : String(amount),
+            currency: firstString(data.currency, data.currency_code)
+        };
     }
 
     function firstString(...values) {
         for (const value of values) {
-            if (value !== undefined && value !== null && value !== "") { return String(value); }
+            if (value !== undefined && value !== null && value !== "") {
+                return String(value);
+            }
         }
+
         return "";
     }
 
     function setText(element, value) {
-        if (!element) { return; }
-        element.textContent = value === undefined || value === null || value === "" ? notProvided : String(value);
+        if (!element) {
+            return;
+        }
+
+        element.textContent = value === undefined || value === null || value === ""
+            ? notProvided
+            : String(value);
     }
 
     function renderStatusPill(status) {
-        if (!resultStatusPill) { return; }
+        if (!resultStatusPill) {
+            return;
+        }
+
         const normalized = String(status || "").toUpperCase();
         let state = "info";
-        if (["COMPLETED"].includes(normalized)) { state = "pass"; }
-        else if (["APPROVED", "PAYER_ACTION_REQUIRED"].includes(normalized)) { state = "warn"; }
-        else if (["VOIDED", "CANCELLED", "CANCELED"].includes(normalized)) { state = "fail"; }
-        else if (["CREATED", "SAVED"].includes(normalized)) { state = "info"; }
+
+        if (["COMPLETED"].includes(normalized)) {
+            state = "pass";
+        } else if (["APPROVED", "PAYER_ACTION_REQUIRED"].includes(normalized)) {
+            state = "warn";
+        } else if (["VOIDED", "CANCELLED", "CANCELED"].includes(normalized)) {
+            state = "fail";
+        } else if (["CREATED", "SAVED"].includes(normalized)) {
+            state = "info";
+        }
+
         resultStatusPill.dataset.state = state;
         resultStatusPill.textContent = status ? String(status) : "Unknown status";
     }
 
     function renderReportState(data) {
-        if (!resultReportState) { return; }
+        if (!resultReportState) {
+            return;
+        }
+
         const complete = data.report_state === "complete";
         const aiAvailable = data.ai_available === true;
-        if (complete && aiAvailable) { resultReportState.dataset.state = "pass"; resultReportState.textContent = "Report complete"; }
-        else if (complete) { resultReportState.dataset.state = "warn"; resultReportState.textContent = "Report complete (AI fallback)"; }
-        else { resultReportState.dataset.state = "fail"; resultReportState.textContent = "Report incomplete"; }
+
+        if (complete && aiAvailable) {
+            resultReportState.dataset.state = "pass";
+            resultReportState.textContent = "Report complete";
+        } else if (complete) {
+            resultReportState.dataset.state = "warn";
+            resultReportState.textContent = "Report complete (AI fallback)";
+        } else {
+            resultReportState.dataset.state = "fail";
+            resultReportState.textContent = "Report incomplete";
+        }
     }
 
     function renderLegend(data) {
-        if (!legendExplanation) { return; }
+        if (!legendExplanation) {
+            return;
+        }
+
         const dot = legendExplanation.querySelector(".legend-dot");
         const ai = data.ai || {};
         const isGemini = ai.origin === "gemini" && data.ai_available === true;
-        if (dot) { dot.dataset.source = isGemini ? "ai" : "fallback"; }
-        if (legendExplanationText) { legendExplanationText.textContent = isGemini ? "Gemini explanation (AI)" : "Deterministic fallback (not AI)"; }
+
+        if (dot) {
+            dot.dataset.source = isGemini ? "ai" : "fallback";
+        }
+
+        if (legendExplanationText) {
+            legendExplanationText.textContent = isGemini
+                ? "Gemini explanation (AI)"
+                : "Deterministic fallback (not AI)";
+        }
     }
 
     function renderCaptures(captures) {
         clearChildren(resultCapturesBody);
+
         const items = Array.isArray(captures) ? captures : [];
+
         if (items.length === 0) {
-            if (resultCapturesWrap) { resultCapturesWrap.hidden = true; }
-            if (resultCapturesEmpty) { resultCapturesEmpty.hidden = false; }
+            if (resultCapturesWrap) {
+                resultCapturesWrap.hidden = true;
+            }
+
+            if (resultCapturesEmpty) {
+                resultCapturesEmpty.hidden = false;
+            }
+
             return;
         }
-        if (resultCapturesWrap) { resultCapturesWrap.hidden = false; }
-        if (resultCapturesEmpty) { resultCapturesEmpty.hidden = true; }
+
+        if (resultCapturesWrap) {
+            resultCapturesWrap.hidden = false;
+        }
+
+        if (resultCapturesEmpty) {
+            resultCapturesEmpty.hidden = true;
+        }
+
         items.forEach((capture) => {
-            if (!resultCapturesBody) { return; }
+            if (!resultCapturesBody) {
+                return;
+            }
+
             const row = document.createElement("tr");
             const amount = capture && capture.amount ? capture.amount : {};
+
             appendCell(row, capture.id);
             appendCell(row, capture.status);
             appendCell(row, amount.value);
@@ -780,86 +592,131 @@
             appendCell(row, capture.created_at);
             appendCell(row, capture.updated_at);
             appendCell(row, capture.seller_protection_status);
+
             resultCapturesBody.appendChild(row);
         });
     }
 
     function appendCell(row, value) {
         const cell = document.createElement("td");
-        cell.textContent = value === undefined || value === null || value === "" ? notProvided : String(value);
+        cell.textContent = value === undefined || value === null || value === ""
+            ? notProvided
+            : String(value);
         row.appendChild(cell);
     }
 
     function renderFindings(findings) {
         clearChildren(resultFindings);
+
         const items = Array.isArray(findings) ? findings : [];
+
         if (items.length === 0) {
-            if (resultFindingsPlaceholder) { resultFindingsPlaceholder.hidden = false; }
-            if (resultFindings) { resultFindings.hidden = true; }
+            if (resultFindingsPlaceholder) {
+                resultFindingsPlaceholder.hidden = false;
+            }
+
+            if (resultFindings) {
+                resultFindings.hidden = true;
+            }
+
             return;
         }
-        if (resultFindingsPlaceholder) { resultFindingsPlaceholder.hidden = true; }
-        if (resultFindings) { resultFindings.hidden = false; }
+
+        if (resultFindingsPlaceholder) {
+            resultFindingsPlaceholder.hidden = true;
+        }
+
+        if (resultFindings) {
+            resultFindings.hidden = false;
+        }
+
         items.forEach((finding) => {
-            if (!resultFindings) { return; }
+            if (!resultFindings) {
+                return;
+            }
+
             const li = document.createElement("li");
             li.className = "finding-item";
+
             const head = document.createElement("div");
             head.className = "finding-head";
+
             const pill = document.createElement("span");
             pill.className = "severity-pill";
             pill.dataset.state = normalizeSeverity(finding.severity);
             pill.textContent = severityLabel(finding.severity);
+
             const title = document.createElement("span");
             title.className = "finding-title";
             title.textContent = String(finding.title || finding.code || "Untitled finding");
+
             head.appendChild(pill);
             head.appendChild(title);
             li.appendChild(head);
+
             if (finding.detail) {
                 const detail = document.createElement("div");
                 detail.className = "finding-detail";
                 detail.textContent = String(finding.detail);
                 li.appendChild(detail);
             }
+
             const evidence = Array.isArray(finding.evidence) ? finding.evidence : [];
+
             if (evidence.length > 0) {
                 const details = document.createElement("details");
                 details.className = "finding-evidence";
+
                 const summary = document.createElement("summary");
                 summary.textContent = "Supporting evidence";
                 details.appendChild(summary);
+
                 const ul = document.createElement("ul");
+
                 evidence.forEach((entry) => {
                     const item = document.createElement("li");
                     item.textContent = formatEvidence(entry);
                     ul.appendChild(item);
                 });
+
                 details.appendChild(ul);
                 li.appendChild(details);
             }
+
             resultFindings.appendChild(li);
         });
     }
 
     function formatEvidence(entry) {
-        if (typeof entry === "string") { return entry; }
-        if (!entry || typeof entry !== "object") { return String(entry); }
+        if (typeof entry === "string") {
+            return entry;
+        }
+
+        if (!entry || typeof entry !== "object") {
+            return String(entry);
+        }
+
         const label = entry.label ? String(entry.label) : "Evidence";
-        const value = entry.value === undefined || entry.value === null || entry.value === "" ? notProvided : String(entry.value);
+        const value = entry.value === undefined || entry.value === null || entry.value === ""
+            ? notProvided
+            : String(entry.value);
         const source = entry.source ? " · Source: " + String(entry.source) : "";
+
         return label + ": " + value + source;
     }
 
     function renderAi(ai) {
         clearChildren(resultAi);
+
         if (!ai) {
             setAiPill("Not generated", "info");
             setAiStatus("", true);
             appendParagraph(resultAi, "No explanation was returned.");
             return;
         }
+
         const origin = String(ai.origin || "");
+
         if (origin === "gemini") {
             setAiPill("Gemini AI", "ai");
             setAiStatus(
@@ -879,8 +736,13 @@
             setAiPill("Unknown explanation", "info");
             setAiStatus("The origin of this explanation could not be determined.", false);
         }
-        if (ai.summary) { appendParagraph(resultAi, String(ai.summary)); }
+
+        if (ai.summary) {
+            appendParagraph(resultAi, String(ai.summary));
+        }
+
         const nextStepsTitle = origin === "gemini" ? "Gemini suggested next steps" : "Fallback suggested next steps";
+
         appendBlock(resultAi, "Facts supported by evidence", ai.facts, false);
         appendBlock(resultAi, "Uncertainties", ai.uncertainties, false);
         appendBlock(resultAi, nextStepsTitle, ai.next_steps, true);
@@ -888,89 +750,157 @@
     }
 
     function setAiPill(text, state) {
-        if (!aiOriginPill) { return; }
+        if (!aiOriginPill) {
+            return;
+        }
+
         aiOriginPill.dataset.state = state;
         aiOriginPill.textContent = text;
     }
 
     function setAiStatus(text, hidden) {
-        if (!aiStatusMessage) { return; }
+        if (!aiStatusMessage) {
+            return;
+        }
+
         aiStatusMessage.textContent = text;
         aiStatusMessage.hidden = hidden === true || text === "";
     }
 
     function appendParagraph(container, text) {
-        if (!container) { return; }
+        if (!container) {
+            return;
+        }
+
         const p = document.createElement("p");
         p.textContent = text;
         container.appendChild(p);
     }
 
     function appendBlock(container, title, items, ordered) {
-        if (!container) { return; }
-        const list = Array.isArray(items) ? items.filter((item) => item !== null && item !== undefined && String(item).trim() !== "") : [];
-        if (list.length === 0) { return; }
+        if (!container) {
+            return;
+        }
+
+        const list = Array.isArray(items)
+            ? items.filter((item) => item !== null && item !== undefined && String(item).trim() !== "")
+            : [];
+
+        if (list.length === 0) {
+            return;
+        }
+
         const block = document.createElement("div");
         block.className = "ai-block";
+
         const heading = document.createElement("h4");
         heading.textContent = title;
         block.appendChild(heading);
+
         const el = document.createElement(ordered ? "ol" : "ul");
         el.className = "ai-list";
+
         list.forEach((item) => {
             const li = document.createElement("li");
             li.textContent = String(item);
             el.appendChild(li);
         });
+
         block.appendChild(el);
         container.appendChild(block);
     }
 
     function renderNextSteps(steps) {
         clearChildren(resultNextSteps);
+
         const items = Array.isArray(steps) && steps.length > 0 ? steps : defaultNextSteps;
-        items.forEach((step) => { appendPlainItem(resultNextSteps, String(step)); });
+
+        items.forEach((step) => {
+            appendPlainItem(resultNextSteps, String(step));
+        });
     }
 
     function renderProvenance(data) {
-        if (!resultProvenance) { return; }
-        if (data.provenance) { resultProvenance.textContent = String(data.provenance); return; }
+        if (!resultProvenance) {
+            return;
+        }
+
+        if (data.provenance) {
+            resultProvenance.textContent = String(data.provenance);
+            return;
+        }
+
         const ai = data.ai || {};
-        if (ai.origin === "gemini" && data.ai_available === true) { resultProvenance.textContent = provenanceGemini; return; }
-        if (ai.origin === "deterministic_fallback") { resultProvenance.textContent = provenanceFallback; return; }
+
+        if (ai.origin === "gemini" && data.ai_available === true) {
+            resultProvenance.textContent = provenanceGemini;
+            return;
+        }
+
+        if (ai.origin === "deterministic_fallback") {
+            resultProvenance.textContent = provenanceFallback;
+            return;
+        }
+
         resultProvenance.textContent = provenanceDefault;
     }
 
     function appendPlainItem(list, text) {
-        if (!list) { return; }
+        if (!list) {
+            return;
+        }
+
         const li = document.createElement("li");
         li.textContent = text;
         list.appendChild(li);
     }
 
     function clearChildren(node) {
-        if (!node) { return; }
-        while (node.firstChild) { node.removeChild(node.firstChild); }
+        if (!node) {
+            return;
+        }
+
+        while (node.firstChild) {
+            node.removeChild(node.firstChild);
+        }
     }
 
     function normalizeSeverity(severity) {
         const value = String(severity || "").toLowerCase();
-        if (["confirmed", "fact", "pass"].includes(value)) { return "confirmed"; }
-        if (["warning", "warn", "possible"].includes(value)) { return "warning"; }
-        if (["critical", "fail", "error"].includes(value)) { return "critical"; }
+
+        if (["confirmed", "fact", "pass"].includes(value)) {
+            return "confirmed";
+        }
+
+        if (["warning", "warn", "possible"].includes(value)) {
+            return "warning";
+        }
+
+        if (["critical", "fail", "error"].includes(value)) {
+            return "critical";
+        }
+
         return "unknown";
     }
 
     function severityLabel(severity) {
         const normalized = normalizeSeverity(severity);
-        if (normalized === "confirmed") { return "Confirmed"; }
-        if (normalized === "warning") { return "Warning"; }
-        if (normalized === "critical") { return "Critical"; }
+
+        if (normalized === "confirmed") {
+            return "Confirmed";
+        }
+
+        if (normalized === "warning") {
+            return "Warning";
+        }
+
+        if (normalized === "critical") {
+            return "Critical";
+        }
+
         return "Unknown";
     }
 
     resetToEmptyState();
     updateClearButton();
-    renderResultActions(null);
-    loadHistory();
 })();

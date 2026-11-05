@@ -3,13 +3,11 @@
 declare(strict_types=1);
 
 use App\Config\Env;
-use App\Database\Database;
-use App\Database\DatabaseException;
 
 $rootDir = dirname(__DIR__);
 
-fwrite(STDOUT, "SCORP AI — Phase 8 local setup & readiness check\n");
-fwrite(STDOUT, str_repeat('=', 50) . "\n\n");
+fwrite(STDOUT, "SCORP AI — Phase 2 stateless setup & readiness check\n");
+fwrite(STDOUT, str_repeat('=', 54) . "\n\n");
 
 $hardFail = false;
 $warnCount = 0;
@@ -35,10 +33,9 @@ function fail(string $msg): void
 
 function section(string $title): void
 {
-    fwrite(STDOUT, "\n-- {$title} " . str_repeat('-', max(0, 46 - mb_strlen($title))) . "\n");
+    fwrite(STDOUT, "\n-- {$title} " . str_repeat('-', max(0, 50 - mb_strlen($title))) . "\n");
 }
 
-// 1. PHP version -------------------------------------------------------------
 section('PHP runtime');
 
 if (PHP_VERSION_ID < 80000) {
@@ -48,7 +45,6 @@ if (PHP_VERSION_ID < 80000) {
 }
 
 $requiredExtensions = ['curl', 'openssl', 'json', 'mbstring'];
-$optionalExtensions = ['pdo_mysql'];
 
 foreach ($requiredExtensions as $ext) {
     if (extension_loaded($ext)) {
@@ -58,15 +54,6 @@ foreach ($requiredExtensions as $ext) {
     }
 }
 
-foreach ($optionalExtensions as $ext) {
-    if (extension_loaded($ext)) {
-        pass("Extension {$ext} loaded (history available).");
-    } else {
-        warn("Optional extension {$ext} missing. Local history will be unavailable until enabled.");
-    }
-}
-
-// 2. Bootstrap / autoload ----------------------------------------------------
 section('Application bootstrap');
 
 $bootstrapPath = $rootDir . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'bootstrap.php';
@@ -87,10 +74,15 @@ try {
 
 $keyClasses = [
     \App\Services\InvestigationWorkflow::class,
-    \App\Services\InvestigationRepository::class,
-    \App\Services\ReportExporter::class,
+    \App\Services\PayPalService::class,
+    \App\Services\GeminiService::class,
+    \App\Services\InvestigationEngine::class,
+    \App\Services\FallbackExplainer::class,
     \App\Services\AuditLogger::class,
-    \App\Database\Database::class,
+    \App\Services\EnvironmentCheckService::class,
+    \App\Support\RateLimiter::class,
+    \App\Support\ReferenceValidator::class,
+    \App\Support\OrderNormalizer::class,
 ];
 
 $classesOk = true;
@@ -102,10 +94,9 @@ foreach ($keyClasses as $class) {
 }
 
 if ($classesOk) {
-    pass('Core classes load.');
+    pass('Core stateless workflow classes load.');
 }
 
-// 3. .env presence + required keys (presence only, never values) -------------
 section('Configuration (.env)');
 
 $envPath = $rootDir . DIRECTORY_SEPARATOR . '.env';
@@ -145,14 +136,17 @@ foreach ($requiredKeys as $key) {
     }
 }
 
-$dbName = $env->get('DB_NAME');
-if ($dbName === null || $dbName === '') {
-    warn('DB_NAME is empty. Local history, printable reports, and exports will be disabled until configured.');
+$auditEnabledRaw = $env->raw('AUDIT_LOG_ENABLED');
+$auditEnabled = $auditEnabledRaw === null
+    ? true
+    : (filter_var(trim($auditEnabledRaw), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? true);
+
+if ($auditEnabled) {
+    pass('Metadata-only audit logging enabled.');
 } else {
-    pass('DB_NAME configured (history enabled).');
+    warn('Audit logging disabled by AUDIT_LOG_ENABLED=false.');
 }
 
-// 4. Outbound connectivity (real, non-fatal) ---------------------------------
 section('Outbound connectivity (PayPal Sandbox + Gemini)');
 
 try {
@@ -174,59 +168,12 @@ try {
     }
 
     if (($result['overall'] ?? '') === 'fail') {
-        warn('Overall environment check reported fail. See http://localhost:8000/env-check.php for details.');
+        warn('Overall environment check reported fail. Open /env-check.php locally for details.');
     }
 } catch (Throwable $exception) {
     warn('Could not run the environment check: ' . $exception->getMessage());
 }
 
-// 5. Database + schema (non-fatal) -------------------------------------------
-section('Local history database');
-
-$dbUsable = false;
-
-try {
-    $database = Database::fromEnv($env);
-    $pdo = $database->pdo();
-    pass('Database connection succeeded.');
-    $dbUsable = true;
-
-    $tables = [];
-    $stmt = $pdo->query('SHOW TABLES');
-    foreach ($stmt->fetchAll(PDO::FETCH_NUM) as $row) {
-        $tables[] = (string) $row[0];
-    }
-
-    $need = ['investigations', 'investigation_findings'];
-    $missing = array_values(array_diff($need, $tables));
-
-    if ($missing === []) {
-        pass('Schema present (investigations + investigation_findings).');
-    } else {
-        warn('Missing table(s): ' . implode(', ', $missing) . '. Attempting migration via bin/db-migrate.php ...');
-
-        $migrateCmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($rootDir . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'db-migrate.php');
-        passthru($migrateCmd, $migrateStatus);
-
-        if ($migrateStatus === 0) {
-            pass('Migration reported success.');
-        } else {
-            warn('Migration exited with status ' . $migrateStatus . '. Create the scorp_ai tables in phpMyAdmin (see README).');
-        }
-    }
-} catch (DatabaseException $exception) {
-    if ($exception->getErrorCode() === 'database_not_configured') {
-        warn('History not configured (DB_NAME empty). Investigations still run; save/print/export disabled.');
-    } else {
-        // Safe: contains host/user and whether a password was sent, never the password.
-        warn('Database not reachable: ' . $exception->getMessage());
-        warn('Check MySQL is running in XAMPP and that DB_USER/DB_PASS in .env match phpMyAdmin.');
-    }
-} catch (Throwable $exception) {
-    warn('Database check error: ' . $exception->getMessage());
-}
-
-// 6. Automated tests ---------------------------------------------------------
 section('Automated test suite');
 
 $testFile = $rootDir . DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR . 'run-tests.php';
@@ -238,13 +185,12 @@ if (is_readable($testFile)) {
     if ($testStatus === 0) {
         pass('Test suite passed (0 failures).');
     } else {
-        fail('Test suite reported failures (exit ' . $testStatus . '). Fix before demoing.');
+        fail('Test suite reported failures (exit ' . $testStatus . '). Fix before deploying.');
     }
 } else {
     warn('tests/run-tests.php not found; skipping.');
 }
 
-// 7. Optional Gemini model listing -------------------------------------------
 section('Gemini model availability (optional)');
 
 if (in_array('--gemini', $argv, true)) {
@@ -256,24 +202,24 @@ if (in_array('--gemini', $argv, true)) {
         warn('Could not list Gemini models (network/quota/key). The app will fall back honestly when needed.');
     }
 } else {
-    warn('Skipped. Re-run with --gemini to list models available to your key: php bin/setup.php --gemini');
+    warn('Skipped. Re-run with --gemini to list models: php bin/setup.php --gemini');
 }
 
-// 8. Summary + next steps ----------------------------------------------------
 section('Summary');
 
 if ($hardFail) {
     fail('One or more hard checks failed. Resolve the [FAIL] lines above before continuing.');
 } else {
-    pass('No hard failures. Optional warnings above do not block investigations, but disable history/print/export if unresolved.');
+    pass('No hard failures. Optional warnings above do not block investigations.');
 }
 
 fwrite(STDOUT, "\nNext steps:\n");
 fwrite(STDOUT, "  1. Fill real keys in .env (never commit it). Revoke any key that was ever pasted/shared.\n");
-fwrite(STDOUT, "  2. Start MySQL in XAMPP; ensure DB_* in .env match phpMyAdmin (DB_USER must be non-empty).\n");
-fwrite(STDOUT, "  3. Re-run: php bin/setup.php   (add --gemini to list models)\n");
-fwrite(STDOUT, "  4. Serve:  php -S localhost:8000 -t public   ->  http://localhost:8000\n");
-fwrite(STDOUT, "  5. Rehearse the demo from docs/demo-script.md (incl. the honest fallback + not-saved paths).\n");
-fwrite(STDOUT, "\nAudit log (metadata-only): var/audit/audit-YYYYMMDD.log  (git-ignored; delete old files freely)\n");
+fwrite(STDOUT, "  2. Re-run: php bin/setup.php   (add --gemini to list models)\n");
+fwrite(STDOUT, "  3. Run tests: php tests/run-tests.php\n");
+fwrite(STDOUT, "  4. Smoke test: php bin/paypal-retrieve.php REAL_SANDBOX_ORDER_ID\n");
+fwrite(STDOUT, "  5. Serve locally: php -S localhost:8000 -t public   ->  http://localhost:8000\n");
+fwrite(STDOUT, "\nThis Phase 2 public build is stateless: no database, no history, no saved reports, no print/export endpoints.\n");
+fwrite(STDOUT, "Audit log (metadata-only): var/audit/audit-YYYYMMDD.log  (git-ignored; delete old files freely)\n");
 
 exit($hardFail ? 1 : 0);

@@ -3,10 +3,7 @@
 declare(strict_types=1);
 
 use App\Api\ApiResponse;
-use App\Database\Database;
-use App\Database\DatabaseException;
 use App\Services\AuditLogger;
-use App\Services\InvestigationRepository;
 use App\Services\InvestigationWorkflow;
 use App\Services\PayPalApiException;
 use App\Support\RateLimiter;
@@ -63,7 +60,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 }
 
 if (!sameOriginAllowed()) {
-    $reject(403, 'forbidden_origin', 'Request origin not allowed', 'This local development endpoint only accepts same-origin requests.');
+    $reject(403, 'forbidden_origin', 'Request origin not allowed', 'This endpoint only accepts same-origin requests.');
 }
 
 $contentLength = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
@@ -150,38 +147,11 @@ try {
     exit;
 }
 
-// Persistence is secondary and must never invalidate a completed investigation.
-$persisted = false;
-$investigationId = null;
-$persistenceError = null;
-$persistenceCode = null;
-
-try {
-    $database = Database::fromEnv($env);
-    $repository = new InvestigationRepository($database);
-    $investigationId = $repository->save($data);
-    $persisted = true;
-} catch (DatabaseException $exception) {
-    $persistenceCode = $exception->getErrorCode();
-    $persistenceError = $persistenceCode === 'database_not_configured'
-        ? 'History is not configured on this machine.'
-        : $exception->getMessage();
-} catch (Throwable $exception) {
-    $persistenceCode = 'persistence_unknown';
-    $persistenceError = 'Investigation completed but could not be saved to history. Cause: ' . $exception->getMessage();
-}
-
 $ai = is_array($data['ai'] ?? null) ? $data['ai'] : null;
-
-$data['persisted'] = $persisted;
-$data['investigation_id'] = $investigationId;
-$data['persistence_error'] = $persistenceError;
 
 $finish('investigate.complete', [
     'reference' => $reference,
-    'outcome' => $persisted ? 'saved' : 'not_saved',
-    'error_code' => $persistenceCode,
-    'persisted' => $persisted,
+    'outcome' => 'complete',
     'ai_origin' => is_array($ai) ? ($ai['origin'] ?? null) : null,
     'ai_available' => (bool) ($data['ai_available'] ?? false),
 ]);

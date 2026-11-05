@@ -36,7 +36,7 @@ $env = require dirname(__DIR__) . '/app/config/bootstrap.php';
             </div>
 
             <div class="header-meta">
-                <span class="badge" data-state="info">Phase 8 — hardening &amp; accessibility</span>
+                <span class="badge" data-state="info">Phase 2 — stateless public build</span>
             </div>
         </div>
     </header>
@@ -49,8 +49,9 @@ $env = require dirname(__DIR__) . '/app/config/bootstrap.php';
                 <div>
                     <h2 id="form-title">Investigate a PayPal Sandbox order</h2>
                     <p class="muted">
-                        One action retrieves PayPal evidence, applies deterministic rules, generates a Gemini
-                        explanation, saves to local history when configured, and lets you print or export the report.
+                        One action retrieves PayPal evidence, applies deterministic rules, and generates a Gemini
+                        explanation. If PayPal retrieval fails, no report is produced. If only Gemini is unavailable,
+                        the report is clearly marked as using a deterministic fallback.
                     </p>
                 </div>
             </div>
@@ -122,15 +123,15 @@ $env = require dirname(__DIR__) . '/app/config/bootstrap.php';
                 <h2>No investigation yet</h2>
 
                 <p class="muted">
-                    Submit a PayPal Sandbox order ID to run the full workflow. Saved results can be reopened from
-                    the history below, printed as a standalone report, or exported as JSON / CSV.
+                    Submit a PayPal Sandbox order ID to run the full workflow: retrieve evidence, apply
+                    deterministic rules, and generate an explanation.
                 </p>
 
                 <ul class="state-list">
                     <li>Empty state: shown before a request.</li>
-                    <li>Loading state: shown while PayPal, rules, Gemini, and the local save run.</li>
+                    <li>Loading state: shown while PayPal, rules, and Gemini run.</li>
                     <li>Error state: shown when the required PayPal step fails. No report is produced, and you can retry.</li>
-                    <li>Result state: shows the complete report with provenance, plus print / export actions when saved.</li>
+                    <li>Result state: shows the complete investigation report with provenance.</li>
                 </ul>
             </div>
 
@@ -142,8 +143,7 @@ $env = require dirname(__DIR__) . '/app/config/bootstrap.php';
                 <p class="muted">
                     1. Retrieving order evidence from PayPal Sandbox.<br>
                     2. Applying deterministic investigation rules.<br>
-                    3. Generating a Gemini explanation, or a labelled fallback if unavailable.<br>
-                    4. Saving to local history when configured.
+                    3. Generating a Gemini explanation, or a labelled fallback if unavailable.
                 </p>
                 <p class="muted loading-hint">This usually takes a few seconds. Please don’t submit again while it runs.</p>
             </div>
@@ -276,60 +276,14 @@ $env = require dirname(__DIR__) . '/app/config/bootstrap.php';
                 <ol id="result-next-steps" class="result-list"></ol>
             </div>
 
-            <p id="result-saved-note" class="saved-note muted" hidden></p>
-
-            <div id="result-actions" class="result-actions" hidden>
-                <span id="result-actions-label" class="actions-label"></span>
-                <button id="action-print" type="button" class="secondary-button small">Printable report</button>
-                <button id="action-json" type="button" class="secondary-button small">Export JSON</button>
-                <button id="action-csv" type="button" class="secondary-button small">Export CSV</button>
-            </div>
-            <p id="result-actions-status" class="actions-status muted" hidden></p>
-
             <p id="result-provenance" class="provenance muted"></p>
-        </section>
-
-        <section id="history-panel" class="panel history-panel" aria-labelledby="history-title">
-            <div class="panel-header">
-                <div>
-                    <h2 id="history-title">Recent investigations</h2>
-                    <p class="muted">
-                        Saved locally. Open to review, print as a standalone report, export as JSON / CSV, or remove.
-                    </p>
-                </div>
-                <div class="header-pills">
-                    <button id="history-refresh" class="secondary-button" type="button">Refresh</button>
-                </div>
-            </div>
-
-            <p id="history-status" class="history-status muted" hidden></p>
-
-            <div id="history-table-wrap" class="table-wrap" hidden>
-                <table aria-label="Recent investigations">
-                    <thead>
-                        <tr>
-                            <th scope="col">Reference</th>
-                            <th scope="col">Status</th>
-                            <th scope="col">Amount</th>
-                            <th scope="col">Explanation</th>
-                            <th scope="col">Saved</th>
-                            <th scope="col">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-body"></tbody>
-                </table>
-            </div>
-
-            <p id="history-empty" class="muted history-empty" hidden>
-                No saved investigations yet.
-            </p>
         </section>
     </main>
 
     <footer class="container footer">
         <p>
             <a href="env-check.php">Environment check</a>
-            · Local development interface. PayPal evidence, Gemini calls, history, audit log, and exports are server-side.
+            · Stateless investigation interface. PayPal evidence, Gemini calls, and metadata-only audit logging are server-side.
         </p>
     </footer>
 </body>
