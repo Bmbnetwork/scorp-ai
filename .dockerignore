@@ -1,0 +1,16 @@
+.git
+.gitignore
+.env
+.env.local
+.env.*.local
+var
+*.log
+node_modules
+vendor
+SCORP-AI-backups
+.github
+.idea
+.vscode
+Thumbs.db
+desktop.ini
+.DS_Store

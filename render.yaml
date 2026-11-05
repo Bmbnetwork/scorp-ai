@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: scorp-ai
+    runtime: docker
+    plan: free
+    healthCheckPath: /health.php
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_ALLOW_DIAGNOSTICS
+        value: "false"
+      - key: PAYPAL_ENV
+        value: sandbox
+      - key: PAYPAL_API_BASE
+        value: https://api-m.sandbox.paypal.com
+      - key: GEMINI_API_BASE
+        value: https://generativelanguage.googleapis.com/v1beta
+      - key: GEMINI_MODEL
+        value: gemini-3.6-flash
+      - key: GEMINI_FALLBACK_MODELS
+        value: gemini-3.5-flash,gemini-3.5-flash-lite
+      - key: GEMINI_RESPONSE_MODE
+        value: json
+      - key: GEMINI_TIMEOUT_SECONDS
+        value: "45"
+      - key: GEMINI_MAX_OUTPUT_TOKENS
+        value: "600"
+      - key: GEMINI_MAX_MODEL_ATTEMPTS
+        value: "3"
+      - key: GEMINI_MAX_TOTAL_REQUESTS
+        value: "4"
+      - key: RATE_LIMIT_RETRIEVE_MAX
+        value: "10"
+      - key: RATE_LIMIT_RETRIEVE_WINDOW
+        value: "60"
+      - key: AUDIT_LOG_ENABLED
+        value: "true"
