@@ -1,0 +1,6 @@
+# Protect environment files if the project root is exposed by the web server.
+<FilesMatch "^\.env">
+    Require all denied
+</FilesMatch>
+
+Options -Indexes

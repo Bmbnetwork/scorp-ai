@@ -1,0 +1,29 @@
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Dependency / build artifacts
+/vendor/
+/node_modules/
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Local database dumps
+*.sql
+*.sqlite
+*.db
+
+# Runtime cache / rate-limit files
+/var/
