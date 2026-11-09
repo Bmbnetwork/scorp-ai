@@ -69,3 +69,9 @@ Use one of these on the live site:
 Open: https://scorp-ai.onrender.com
 THESE ARE SANDBOX ORDER ID
 Paste an order ID into the field and click **Start investigation**.
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for vulnerability reporting guidance.
+
+Do not commit `.env`, PayPal secrets, Gemini API keys, access tokens, or real customer transaction data.
