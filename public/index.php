@@ -100,7 +100,9 @@ $env = require dirname(__DIR__) . '/app/config/bootstrap.php';
                         </span>
                         <span id="investigate-label">Start investigation</span>
                     </button>
-
+                                        <button id="seed-button" class="secondary-button" type="button" aria-label="Create a live PayPal Sandbox test order and investigate it">
+                        Get a live test order
+                    </button>
                     <button id="clear-button" class="secondary-button" type="button" disabled>
                         Clear
                     </button>
