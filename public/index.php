@@ -11,7 +11,7 @@ $env = require dirname(__DIR__) . '/app/config/bootstrap.php';
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <meta name="color-scheme" content="light">
-    <title>SCORP AI â€” Payment incident investigation</title>
+    <title>SCORP AI Payment incident investigation</title>
     <meta name="description" content="AI-powered payment incident investigation for online merchants.">
     <link rel="stylesheet" href="assets/css/styles.css">
     <script src="assets/js/app.js?v=3" defer></script>
@@ -133,7 +133,7 @@ $env = require dirname(__DIR__) . '/app/config/bootstrap.php';
             <div id="loading-state" class="state" hidden>
                 <span class="spinner" aria-hidden="true"></span>
 
-                <h2>Investigatingâ€¦</h2>
+                <h2>Investigating</h2>
 
                                 <p class="muted">Retrieving PayPal evidence, analyzing findings, and preparing the report.</p>
                 <p class="muted loading-hint">This usually takes a few seconds.</p>
