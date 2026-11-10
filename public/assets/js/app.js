@@ -7,6 +7,7 @@
     const investigateButton = document.getElementById("investigate-button");
     const investigateLabel = document.getElementById("investigate-label");
     const clearButton = document.getElementById("clear-button");
+    const seedButton = document.getElementById("seed-button");
 
     const announcer = document.getElementById("sr-announcer");
 
@@ -60,6 +61,7 @@
     }
 
     const apiEndpoint = new URL("api/retrieve.php", window.location.href).href;
+        const seedEndpoint = new URL("api/seed-order.php", window.location.href).href;
     const referencePattern = /^[A-Za-z0-9_-]{6,64}$/;
     const notProvided = "Not provided";
 
@@ -152,6 +154,42 @@
         updateClearButton();
         input.focus();
     });
+
+        if (seedButton) {
+        seedButton.addEventListener("click", async () => {
+            if (inFlight) {
+                return;
+            }
+            seedButton.disabled = true;
+            announce("Creating a live PayPal Sandbox test orderâ€¦");
+            try {
+                const response = await fetch(seedEndpoint, {
+                    method: "POST",
+                    headers: { "Accept": "application/json" },
+                    cache: "no-store"
+                });
+                const payload = await readJsonResponse(response);
+                if (payload.ok === true && payload.data && payload.data.reference) {
+                    input.value = String(payload.data.reference);
+                    clearFieldError();
+                    updateClearButton();
+                    announce("Test order ready: " + payload.data.reference + ". Starting investigation.");
+                    runInvestigation(String(payload.data.reference));
+                } else {
+                    const msg = (payload && payload.error && payload.error.message)
+                        ? String(payload.error.message)
+                        : "Could not create a test order right now.";
+                    announce(msg);
+                    setFieldError(msg);
+                }
+            } catch (error) {
+                announce("Could not reach the test-order service.");
+                setFieldError("Could not reach the test-order service.");
+            } finally {
+                seedButton.disabled = false;
+            }
+        });
+    }
 
     if (errorRetry) {
         errorRetry.addEventListener("click", () => {
@@ -282,7 +320,7 @@
         investigateButton.setAttribute("aria-busy", "true");
 
         if (investigateLabel) {
-            investigateLabel.textContent = "Investigating…";
+            investigateLabel.textContent = "Investigatingâ€¦";
         }
 
         if (clearButton) {
@@ -700,7 +738,7 @@
         const value = entry.value === undefined || entry.value === null || entry.value === ""
             ? notProvided
             : String(entry.value);
-        const source = entry.source ? " · Source: " + String(entry.source) : "";
+        const source = entry.source ? " Â· Source: " + String(entry.source) : "";
 
         return label + ": " + value + source;
     }
