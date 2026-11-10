@@ -11,10 +11,10 @@ $env = require dirname(__DIR__) . '/app/config/bootstrap.php';
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <meta name="color-scheme" content="light">
-    <title>SCORP AI — Payment incident investigation</title>
+    <title>SCORP AI â€” Payment incident investigation</title>
     <meta name="description" content="AI-powered payment incident investigation for online merchants.">
     <link rel="stylesheet" href="assets/css/styles.css">
-    <script src="assets/js/app.js" defer></script>
+    <script src="assets/js/app.js?v=3" defer></script>
 </head>
 <body>
     <a class="skip-link" href="#main">Skip to investigation</a>
@@ -100,7 +100,9 @@ $env = require dirname(__DIR__) . '/app/config/bootstrap.php';
                         </span>
                         <span id="investigate-label">Start investigation</span>
                     </button>
-
+                                        <button id="seed-button" class="secondary-button" type="button" aria-label="Create a live PayPal Sandbox test order and investigate it">
+                        Get a live test order
+                    </button>
                     <button id="clear-button" class="secondary-button" type="button" disabled>
                         Clear
                     </button>
@@ -131,7 +133,7 @@ $env = require dirname(__DIR__) . '/app/config/bootstrap.php';
             <div id="loading-state" class="state" hidden>
                 <span class="spinner" aria-hidden="true"></span>
 
-                <h2>Investigating…</h2>
+                <h2>Investigatingâ€¦</h2>
 
                                 <p class="muted">Retrieving PayPal evidence, analyzing findings, and preparing the report.</p>
                 <p class="muted loading-hint">This usually takes a few seconds.</p>
@@ -197,22 +199,22 @@ $env = require dirname(__DIR__) . '/app/config/bootstrap.php';
             </div>
 
             <dl class="definition-grid">
-                <div><dt>Order reference</dt><dd id="result-reference">—</dd></div>
-                <div><dt>Observed order status</dt><dd id="result-payment-status">—</dd></div>
-                <div><dt>Intent</dt><dd id="result-intent">—</dd></div>
-                <div><dt>Amount</dt><dd id="result-amount">—</dd></div>
-                <div><dt>Currency</dt><dd id="result-currency">—</dd></div>
-                <div><dt>Created</dt><dd id="result-created">—</dd></div>
-                <div><dt>Updated</dt><dd id="result-updated">—</dd></div>
-                <div><dt>Environment</dt><dd id="result-environment">—</dd></div>
-                <div><dt>Retrieved at</dt><dd id="result-retrieved-at">—</dd></div>
-                <div><dt>Investigated at</dt><dd id="result-investigated-at">—</dd></div>
-                <div><dt>Report generated at</dt><dd id="result-report-generated-at">—</dd></div>
-                <div><dt>PayPal endpoint</dt><dd id="result-endpoint">—</dd></div>
+                <div><dt>Order reference</dt><dd id="result-reference">â€”</dd></div>
+                <div><dt>Observed order status</dt><dd id="result-payment-status">â€”</dd></div>
+                <div><dt>Intent</dt><dd id="result-intent">â€”</dd></div>
+                <div><dt>Amount</dt><dd id="result-amount">â€”</dd></div>
+                <div><dt>Currency</dt><dd id="result-currency">â€”</dd></div>
+                <div><dt>Created</dt><dd id="result-created">â€”</dd></div>
+                <div><dt>Updated</dt><dd id="result-updated">â€”</dd></div>
+                <div><dt>Environment</dt><dd id="result-environment">â€”</dd></div>
+                <div><dt>Retrieved at</dt><dd id="result-retrieved-at">â€”</dd></div>
+                <div><dt>Investigated at</dt><dd id="result-investigated-at">â€”</dd></div>
+                <div><dt>Report generated at</dt><dd id="result-report-generated-at">â€”</dd></div>
+                <div><dt>PayPal endpoint</dt><dd id="result-endpoint">â€”</dd></div>
             </dl>
 
             <div class="result-section">
-                <h3>PayPal evidence — capture details</h3>
+                <h3>PayPal evidence â€” capture details</h3>
 
                 <div id="result-captures-wrap" class="table-wrap" hidden>
                     <table aria-label="Capture details">

@@ -29,17 +29,11 @@ if (!function_exists('sameOriginAllowed')) {
     function sameOriginAllowed(): bool
     {
         $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-        if ($origin === '') {
-            return true;
-        }
+        if ($origin === '') { return true; }
         $parsed = parse_url($origin);
-        if (!is_array($parsed) || empty($parsed['host'])) {
-            return false;
-        }
+        if (!is_array($parsed) || empty($parsed['host'])) { return false; }
         $originHost = (string) $parsed['host'];
-        if (isset($parsed['port'])) {
-            $originHost .= ':' . $parsed['port'];
-        }
+        if (isset($parsed['port'])) { $originHost .= ':' . $parsed['port']; }
         $serverHost = $_SERVER['HTTP_HOST'] ?? '';
         return strcasecmp($originHost, $serverHost) === 0;
     }
@@ -131,9 +125,7 @@ curl_close($createCh);
 $reference = '';
 if ($createStatus === 201 && is_string($createBody)) {
     $cj = json_decode($createBody, true);
-    if (is_array($cj) && isset($cj['id']) && is_string($cj['id'])) {
-        $reference = $cj['id'];
-    }
+    if (is_array($cj) && isset($cj['id']) && is_string($cj['id'])) { $reference = $cj['id']; }
 }
 
 if ($reference === '') {
