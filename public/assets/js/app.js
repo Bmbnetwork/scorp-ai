@@ -61,7 +61,7 @@
     }
 
     const apiEndpoint = new URL("api/retrieve.php", window.location.href).href;
-        const seedEndpoint = new URL("api/seed-order.php", window.location.href).href;
+    const seedEndpoint = new URL("api/seed-order.php", window.location.href).href;
     const referencePattern = /^[A-Za-z0-9_-]{6,64}$/;
     const notProvided = "Not provided";
 
@@ -155,13 +155,13 @@
         input.focus();
     });
 
-        if (seedButton) {
+    if (seedButton) {
         seedButton.addEventListener("click", async () => {
             if (inFlight) {
                 return;
             }
             seedButton.disabled = true;
-            announce("Creating a live PayPal Sandbox test orderâ€¦");
+            announce("Creating a live PayPal Sandbox test order...");
             try {
                 const response = await fetch(seedEndpoint, {
                     method: "POST",
@@ -320,11 +320,15 @@
         investigateButton.setAttribute("aria-busy", "true");
 
         if (investigateLabel) {
-            investigateLabel.textContent = "Investigatingâ€¦";
+            investigateLabel.textContent = "Investigating...";
         }
 
         if (clearButton) {
             clearButton.disabled = true;
+        }
+
+        if (seedButton) {
+            seedButton.disabled = true;
         }
     }
 
@@ -339,6 +343,10 @@
         }
 
         updateClearButton();
+
+        if (seedButton) {
+            seedButton.disabled = false;
+        }
     }
 
     function clearErrorState() {
@@ -738,7 +746,7 @@
         const value = entry.value === undefined || entry.value === null || entry.value === ""
             ? notProvided
             : String(entry.value);
-        const source = entry.source ? " Â· Source: " + String(entry.source) : "";
+        const source = entry.source ? " - Source: " + String(entry.source) : "";
 
         return label + ": " + value + source;
     }
