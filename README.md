@@ -15,7 +15,7 @@ It takes one PayPal Sandbox order ID, retrieves the real order evidence from Pay
 ## Live demo
 
 1. Open https://scorp-ai.onrender.com
-2. Enter a valid PayPal Sandbox order ID.
+2. Enter a valid PayPal Sandbox order ID or Click "Get a live test Order".
 3. Click **Start investigation**.
 4. Review the report:
    - PayPal evidence
